@@ -91,7 +91,7 @@ if uploaded_file is not None:
         score = np.mean(error_map) * 100
         st.metric(label="Reconstruction Error (%)", value=f"{score:.2f}")
         if category == "carpet":
-            if score > 40:
+            if score > 12:
                 st.error("⚠️ This is a Defective carpet (high anomaly detected).")
             else:
                 st.success("✅ This is a GOOD carpet.")
