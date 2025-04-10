@@ -74,35 +74,40 @@ category = st.selectbox("Select category of image", options=["carpet", "bottle"]
 if uploaded_file is not None:
     img = Image.open(uploaded_file).convert("RGB")
     tensor = transform(img)
-    category = predict_category(tensor, classifier)
-    st.info(f"Predicted Category: **{category.upper()}**")
-    if category == "carpet":
-        error_map = detect_carpet_anomaly(tensor, model_carpet)
-    else:
-        error_map = detect_bottle_anomaly(tensor, model_bottle)
-
-    overlay = overlay_heatmap(img, error_map)
-    overlay_resized = cv2.resize(overlay, (300, 300))
-    img_resized = img.resize((300, 300))
+    category_predicted = predict_category(tensor, classifier)
+    st.info(f"Predicted Category: **{category_predicted.upper()}**")
+    if category == category_predicted:
+        st.success("✅ Category matches the uploaded image.")
     
-    score = np.mean(error_map) * 100
-    st.metric(label="Reconstruction Error (%)", value=f"{score:.2f}")
-    if category == "carpet":
-        if score > 40:
-            st.error("⚠️ This is a BAD carpet (high anomaly detected).")
+        if category == "carpet":
+            error_map = detect_carpet_anomaly(tensor, model_carpet)
         else:
-            st.success("✅ This is a GOOD carpet.")
-    else:
-        if score > 10:
-            st.error("⚠️ This is a BAD bottle (high anomaly detected).")
-        else:
-            st.success("✅ This is a GOOD bottle.")
+            error_map = detect_bottle_anomaly(tensor, model_bottle)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.image(img_resized, caption="Original Image", use_column_width=False)
-    with col2:
-        st.image(overlay_resized, caption="Anomaly Heatmap", channels="BGR", use_column_width=False)
+        overlay = overlay_heatmap(img, error_map)
+        overlay_resized = cv2.resize(overlay, (300, 300))
+        img_resized = img.resize((300, 300))
+        
+        score = np.mean(error_map) * 100
+        st.metric(label="Reconstruction Error (%)", value=f"{score:.2f}")
+        if category == "carpet":
+            if score > 40:
+                st.error("⚠️ This is a Defective carpet (high anomaly detected).")
+            else:
+                st.success("✅ This is a GOOD carpet.")
+        else:
+            if score > 10:
+                st.error("⚠️ This is a Defective bottle (high anomaly detected).")
+            else:
+                st.success("✅ This is a GOOD bottle.")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.image(img_resized, caption="Original Image", use_column_width=False)
+        with col2:
+            st.image(overlay_resized, caption="Anomaly Heatmap", channels="BGR", use_column_width=False)
+    else:
+        st.error("⚠️ Category does not match the uploaded image. Please check the category selection.")
 
     
     
