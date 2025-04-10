@@ -9,7 +9,8 @@ from model import BottleCarpetClassifier
 
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 model_bottle = ImprovedAutoencoder().to(device)
 model_carpet = CarpetPatchAutoencoder().to(device)
 classifier = BottleCarpetClassifier().to(device)
