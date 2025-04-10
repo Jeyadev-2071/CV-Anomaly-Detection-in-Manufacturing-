@@ -14,7 +14,7 @@ device = "cpu"
 model_bottle = ImprovedAutoencoder().to(device)
 model_carpet = CarpetPatchAutoencoder().to(device)
 classifier = BottleCarpetClassifier().to(device)
-classifier.load_state_dict(torch.load("Models_dump/classifier_bottle_carpet.pth"))
+classifier.load_state_dict(torch.load("Models_dump/classifier_bottle_carpet.pth", map_location=device))
 model_bottle.load_state_dict(torch.load("Models_dump/model_bottle.pth", map_location=device))
 model_carpet.load_state_dict(torch.load("Models_dump/model_carpet_patch.pth", map_location=device))
 model_bottle.eval()
