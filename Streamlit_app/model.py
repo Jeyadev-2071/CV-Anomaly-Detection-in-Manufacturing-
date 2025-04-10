@@ -49,3 +49,20 @@ class BottleCarpetClassifier(nn.Module):
         )
     def forward(self, x):
         return self.net(x)
+    
+class CapsulePatchAutoencoder(nn.Module):
+    def __init__(self):
+        super(CapsulePatchAutoencoder, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv2d(3, 32, 3, 2, 1), nn.ReLU(),
+            nn.Conv2d(32, 64, 3, 2, 1), nn.ReLU(),
+            nn.Conv2d(64, 128, 3, 2, 1), nn.ReLU()
+        )
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(128, 64, 3, 2, 1, 1), nn.ReLU(),
+            nn.ConvTranspose2d(64, 32, 3, 2, 1, 1), nn.ReLU(),
+            nn.Conv2d(32, 3, 3, 1, 1), nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        return self.decoder(self.encoder(x))
