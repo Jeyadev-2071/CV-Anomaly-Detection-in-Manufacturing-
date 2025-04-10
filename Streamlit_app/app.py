@@ -60,7 +60,6 @@ category = st.selectbox("Select category of image", options=["carpet", "bottle"]
 
 if uploaded_file is not None:
     img = Image.open(uploaded_file).convert("RGB")
-    st.image(img, caption="Uploaded Image", use_column_width=True)
     tensor = transform(img)
 
     if category == "carpet":
@@ -69,7 +68,27 @@ if uploaded_file is not None:
         error_map = detect_bottle_anomaly(tensor, model_bottle)
 
     overlay = overlay_heatmap(img, error_map)
-    st.image(overlay, caption="Anomaly Heatmap", use_column_width=True)
-
+    overlay_resized = cv2.resize(overlay, (300, 300))
+    img_resized = img.resize((300, 300))
+    
     score = np.mean(error_map) * 100
     st.metric(label="Reconstruction Error (%)", value=f"{score:.2f}")
+    if category == "carpet":
+        if score > 40:
+            st.error("⚠️ This is a BAD carpet (high anomaly detected).")
+        else:
+            st.success("✅ This is a GOOD carpet.")
+    else:
+        if score > 10:
+            st.error("⚠️ This is a BAD bottle (high anomaly detected).")
+        else:
+            st.success("✅ This is a GOOD bottle.")
+    # ---- Side-by-side display using columns ----
+    col1, col2 = st.columns(2)
+    with col1:
+        st.image(img_resized, caption="Original Image", use_column_width=False)
+    with col2:
+        st.image(overlay_resized, caption="Anomaly Heatmap", channels="BGR", use_column_width=False)
+
+    
+    
