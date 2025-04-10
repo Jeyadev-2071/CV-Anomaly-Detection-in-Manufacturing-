@@ -5,23 +5,35 @@ import numpy as np
 import cv2
 from PIL import Image
 from model import ImprovedAutoencoder, CarpetPatchAutoencoder
+from model import BottleCarpetClassifier
 
-# --- Load Models ---
+
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model_bottle = ImprovedAutoencoder().to(device)
 model_carpet = CarpetPatchAutoencoder().to(device)
+classifier = BottleCarpetClassifier().to(device)
+classifier.load_state_dict(torch.load("Models_dump/classifier_bottle_carpet.pth"))
 model_bottle.load_state_dict(torch.load("Models_dump/model_bottle.pth", map_location=device))
 model_carpet.load_state_dict(torch.load("Models_dump/model_carpet_patch.pth", map_location=device))
 model_bottle.eval()
 model_carpet.eval()
+classifier.eval()
 
-# --- Image Preprocessing ---
+
 transform = transforms.Compose([
     transforms.Resize((256, 256)),
     transforms.ToTensor()
 ])
 
-# --- Patch-Based Carpet Anomaly Detection ---
+def predict_category(tensor, classifier):
+    with torch.no_grad():
+        tensor = tensor.unsqueeze(0).to(device)
+        logits = classifier(tensor)
+        pred = torch.argmax(logits, dim=1).item()
+        return "bottle" if pred == 0 else "carpet"
+
+
 def detect_carpet_anomaly(image_tensor, model, patch_size=128, stride=64):
     image_tensor = image_tensor.unsqueeze(0).to(device)
     _, _, H, W = image_tensor.shape
@@ -37,7 +49,7 @@ def detect_carpet_anomaly(image_tensor, model, patch_size=128, stride=64):
                 count_map[i:i+patch_size, j:j+patch_size] += 1
     return error_map / np.maximum(count_map, 1)
 
-# --- Bottle Inference ---
+
 def detect_bottle_anomaly(image_tensor, model):
     image_tensor = image_tensor.unsqueeze(0).to(device)
     with torch.no_grad():
@@ -45,7 +57,7 @@ def detect_bottle_anomaly(image_tensor, model):
         error_map = torch.abs(image_tensor - recon).mean(dim=1).squeeze().cpu().numpy()
     return error_map
 
-# --- Heatmap Overlay ---
+
 def overlay_heatmap(original, error_map):
     original = np.array(original.resize((256, 256)))
     error_norm = ((error_map - error_map.min()) / (error_map.max() - error_map.min() + 1e-8) * 255).astype(np.uint8)
@@ -53,15 +65,17 @@ def overlay_heatmap(original, error_map):
     overlay = cv2.addWeighted(original, 0.6, heatmap, 0.4, 0)
     return overlay
 
-# --- Streamlit Interface ---
+
 st.title("Multi-Category Anomaly Detector (Carpet & Bottle)")
 uploaded_file = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
+
 category = st.selectbox("Select category of image", options=["carpet", "bottle"])
 
 if uploaded_file is not None:
     img = Image.open(uploaded_file).convert("RGB")
     tensor = transform(img)
-
+    category = predict_category(tensor, classifier)
+    st.info(f"Predicted Category: **{category.upper()}**")
     if category == "carpet":
         error_map = detect_carpet_anomaly(tensor, model_carpet)
     else:
@@ -83,7 +97,7 @@ if uploaded_file is not None:
             st.error("⚠️ This is a BAD bottle (high anomaly detected).")
         else:
             st.success("✅ This is a GOOD bottle.")
-    # ---- Side-by-side display using columns ----
+
     col1, col2 = st.columns(2)
     with col1:
         st.image(img_resized, caption="Original Image", use_column_width=False)

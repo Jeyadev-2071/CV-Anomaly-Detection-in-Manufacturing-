@@ -35,3 +35,17 @@ class CarpetPatchAutoencoder(nn.Module):
 
     def forward(self, x):
         return self.decoder(self.encoder(x))
+
+class BottleCarpetClassifier(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(3, 16, 3, 2, 1), nn.ReLU(),  # 128
+            nn.Conv2d(16, 32, 3, 2, 1), nn.ReLU(),  # 64
+            nn.Conv2d(32, 64, 3, 2, 1), nn.ReLU(),  # 32
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(64, 2)  # 2 classes: [bottle, carpet]
+        )
+    def forward(self, x):
+        return self.net(x)
